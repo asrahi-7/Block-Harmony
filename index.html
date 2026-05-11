@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 12px 8px 20px;
+    overflow-x: hidden;
+    touch-action: none;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    color: #58a6ff;
+    margin-bottom: 2px;
+  }
+  .subtitle { font-size: 12px; color: #8b949e; margin-bottom: 10px; }
+  .hud {
+    display: flex; gap: 12px; margin-bottom: 10px; width: 100%; max-width: 360px;
+  }
+  .hud-box {
+    flex: 1; background: #161b22; border: 0.5px solid #30363d;
+    border-radius: 8px; padding: 8px 12px; text-align: center;
+  }
+  .hud-label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .hud-val { font-size: 22px; font-weight: 500; color: #e6edf3; line-height: 1.2; }
+  #combo-display {
+    height: 22px; font-size: 13px; color: #f0883e; font-weight: 500;
+    text-align: center; margin-bottom: 6px; transition: opacity 0.3s;
+  }
+  #game-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 3px;
+    background: #161b22;
+    border: 0.5px solid #30363d;
+    border-radius: 10px;
+    padding: 6px;
+    width: 100%; max-width: 360px;
+    user-select: none;
+    touch-action: none;
+  }
+  .cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: #0d1117;
+    border: 0.5px solid #21262d;
+    transition: background 0.08s, transform 0.08s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell.filled::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.10);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .cell.ghost { background: rgba(88,166,255,0.18) !important; border-color: rgba(88,166,255,0.4) !important; }
+  .cell.ghost-bad { background: rgba(248,81,73,0.18) !important; border-color: rgba(248,81,73,0.4) !important; }
+  .cell.clearing { animation: cellPop 0.35s ease forwards; }
+  @keyframes cellPop {
+    0% { transform: scale(1); opacity: 1; }
+    40% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+  .cell.land-anim { animation: landBounce 0.18s ease; }
+  @keyframes landBounce {
+    0% { transform: scale(1.15); }
+    60% { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+  #blocks-area {
+    display: flex; gap: 12px; margin-top: 10px;
+    width: 100%; max-width: 360px; justify-content: center; align-items: center;
+    height: 100px;
+  }
+  .block-slot {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    background: #161b22; border: 0.5px solid #30363d; border-radius: 10px;
+    height: 100%; cursor: grab; transition: opacity 0.2s, transform 0.15s;
+    position: relative;
+  }
+  .block-slot:active { cursor: grabbing; }
+  .block-slot.used { opacity: 0.15; pointer-events: none; }
+  .block-slot.lifting { transform: scale(1.08); box-shadow: 0 0 0 2px #58a6ff44; }
+  .block-grid {
+    display: grid; gap: 3px; pointer-events: none;
+  }
+  .bp {
+    width: 16px; height: 16px; border-radius: 3px;
+    border: 0.5px solid rgba(255,255,255,0.12);
+  }
+  .bp.empty { background: transparent; border-color: transparent; }
+  #drag-ghost {
+    position: fixed; pointer-events: none; z-index: 9999;
+    display: none; opacity: 0.88; transition: none;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.6));
+    transform: scale(1.22);
+    transform-origin: top left;
+  }
+  .drag-ghost-grid { display: grid; gap: 3px; }
+  .drag-bp {
+    width: 22px; height: 22px; border-radius: 4px;
+    border: 0.5px solid rgba(255,255,255,0.18);
+  }
+  .drag-bp.empty { background: transparent; border-color: transparent; }
+  .controls { display: flex; gap: 8px; margin-top: 10px; }
+  .btn {
+    background: #161b22; border: 0.5px solid #30363d; color: #e6edf3;
+    font-size: 12px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #21262d; }
+  #score-pop {
+    position: fixed; pointer-events: none; z-index: 9999;
+    font-size: 18px; font-weight: 500; color: #3fb950;
+    display: none; animation: floatUp 0.8s ease forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
+  }
+  .score-pulse { animation: sPulse 0.35s ease; }
+  @keyframes sPulse {
+    0% { transform: scale(1); color: #e6edf3; }
+    50% { transform: scale(1.3); color: #3fb950; }
+    100% { transform: scale(1); color: #e6edf3; }
+  }
+  #overlay {
+    position: fixed; inset: 0; background: rgba(13,17,23,0.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 10000; padding: 20px;
+  }
+  #overlay.hidden { display: none; }
+  .modal {
+    background: #161b22; border: 0.5px solid #30363d;
+    border-radius: 14px; padding: 28px 24px; max-width: 320px; width: 100%; text-align: center;
+  }
+  .modal h2 { font-size: 20px; font-weight: 500; margin-bottom: 8px; }
+  .modal p { font-size: 13px; color: #8b949e; margin-bottom: 16px; line-height: 1.6; }
+  .modal-score { font-size: 36px; font-weight: 500; color: #58a6ff; margin-bottom: 4px; }
+  .modal-best { font-size: 13px; color: #8b949e; margin-bottom: 20px; }
+  .btn-primary {
+    background: #58a6ff; color: #0d1117; border: none;
+    font-size: 14px; font-weight: 500; padding: 10px 28px;
+    border-radius: 8px; cursor: pointer; width: 100%; transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #79bfff; }
+  #particle-canvas {
+    position: fixed; inset: 0; pointer-events: none; z-index: 8888;
+  }
+</style>
+</head>
+<body>
+<canvas id="particle-canvas"></canvas>
+<div id="drag-ghost"></div>
+<div id="score-pop"></div>
+
+<h1>Block Harmony</h1>
+<p class="subtitle">Drop blocks, clear lines, find your flow.</p>
+
+<div class="hud">
+  <div class="hud-box">
+    <div class="hud-label">Score</div>
+    <div class="hud-val" id="score">0</div>
+  </div>
+  <div class="hud-box">
+    <div class="hud-label">Best</div>
+    <div class="hud-val" id="best">0</div>
+  </div>
+  <div class="hud-box">
+    <div class="hud-label">Lines</div>
+    <div class="hud-val" id="lines">0</div>
+  </div>
+</div>
+
+<div id="combo-display"></div>
+<div id="game-grid"></div>
+<div id="blocks-area"></div>
+
+<div class="controls">
+  <button class="btn" id="btn-restart">↺ Restart</button>
+  <button class="btn" id="btn-how">? How to play</button>
+</div>
+
+<div id="overlay" class="hidden">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+const GS = 10;
+const COLORS = {
+  cyan:   '#17a2b8',
+  blue:   '#3d8bcd',
+  purple: '#7957d5',
+  green:  '#3fb950',
+  amber:  '#d29922',
+  coral:  '#d85a30',
+  pink:   '#c9417b',
+  teal:   '#1d9e75',
+};
+const CLIST = Object.values(COLORS);
+const SHAPES = [
+  { s: [[1,1],[1,1]], name:'sq2' },
+  { s: [[1,1,1],[1,1,1]], name:'rect23' },
+  { s: [[1]], name:'sq1' },
+  { s: [[1],[1]], name:'i2v' },
+  { s: [[1],[1],[1]], name:'i3v' },
+  { s: [[1],[1],[1],[1]], name:'i4v' },
+  { s: [[1,1]], name:'i2h' },
+  { s: [[1,1,1]], name:'i3h' },
+  { s: [[1,1,1,1]], name:'i4h' },
+  { s: [[1,0],[1,0],[1,1]], name:'lbl' },
+  { s: [[0,1],[0,1],[1,1]], name:'lbr' },
+  { s: [[1,1,1],[1,0,0]], name:'lt' },
+  { s: [[1,1,1],[0,0,1]], name:'rt' },
+  { s: [[1,1,1],[0,1,0]], name:'tv' },
+  { s: [[0,1,1],[1,1,0]], name:'s' },
+  { s: [[1,1,0],[0,1,1]], name:'z' },
+  { s: [[1,0,0],[1,1,1]], name:'lflip' },
+  { s: [[0,0,1],[1,1,1]], name:'jflip' },
+];
+
+let grid = [], score = 0, best = 0, linesCleared = 0, combo = 0;
+let blocks = [null,null,null], dragging = null;
+let gameActive = false;
+
+const gridEl = document.getElementById('game-grid');
+const blocksArea = document.getElementById('blocks-area');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const linesEl = document.getElementById('lines');
+const comboEl = document.getElementById('combo-display');
+const overlay = document.getElementById('overlay');
+const modalContent = document.getElementById('modal-content');
+const ghostEl = document.getElementById('drag-ghost');
+const scorePop = document.getElementById('score-pop');
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+
+let particles = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function pickColor() { return CLIST[Math.floor(Math.random()*CLIST.length)]; }
+function randShape() { return SHAPES[Math.floor(Math.random()*SHAPES.length)]; }
+
+function init() {
+  grid = Array.from({length:GS}, () => Array(GS).fill(null));
+  score = 0; linesCleared = 0; combo = 0;
+  best = parseInt(localStorage.getItem('bh_best')||'0');
+  gameActive = true;
+  updateHUD();
+  renderGrid();
+  dealBlocks();
+  overlay.classList.add('hidden');
+}
+
+function updateHUD() {
+  scoreEl.textContent = score;
+  bestEl.textContent = best;
+  linesEl.textContent = linesCleared;
+}
+
+function renderGrid() {
+  gridEl.innerHTML = '';
+  for(let r=0;r<GS;r++) for(let c=0;c<GS;c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.r = r; cell.dataset.c = c;
+    if(grid[r][c]) {
+      cell.style.background = grid[r][c];
+      cell.classList.add('filled');
+    }
+    gridEl.appendChild(cell);
+  }
+}
+
+function getCell(r,c) {
+  if(r<0||r>=GS||c<0||c>=GS) return null;
+  return gridEl.children[r*GS+c];
+}
+
+function dealBlocks() {
+  const color = pickColor();
+  for(let i=0;i<3;i++) {
+    if(blocks[i] === null) {
+      const sh = randShape();
+      blocks[i] = { shape: sh.s, color: pickColor(), id: i };
+    }
+  }
+  renderBlocks();
+}
+
+function renderBlocks() {
+  blocksArea.innerHTML = '';
+  for(let i=0;i<3;i++) {
+    const slot = document.createElement('div');
+    slot.className = 'block-slot';
+    slot.dataset.idx = i;
+    if(!blocks[i]) { slot.classList.add('used'); blocksArea.appendChild(slot); continue; }
+    const b = blocks[i];
+    const rows = b.shape.length, cols = b.shape[0].length;
+    const bg = document.createElement('div');
+    bg.className = 'block-grid';
+    bg.style.gridTemplateColumns = `repeat(${cols}, 16px)`;
+    bg.style.gridTemplateRows = `repeat(${rows}, 16px)`;
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+      const p = document.createElement('div');
+      p.className = b.shape[r][c] ? 'bp' : 'bp empty';
+      if(b.shape[r][c]) p.style.background = b.color;
+      bg.appendChild(p);
+    }
+    slot.appendChild(bg);
+    attachDrag(slot, i);
+    blocksArea.appendChild(slot);
+  }
+}
+
+function buildGhostEl(block) {
+  const rows = block.shape.length, cols = block.shape[0].length;
+  ghostEl.innerHTML = '';
+  const g = document.createElement('div');
+  g.className = 'drag-ghost-grid';
+  g.style.gridTemplateColumns = `repeat(${cols}, 22px)`;
+  g.style.gridTemplateRows = `repeat(${rows}, 22px)`;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+    const p = document.createElement('div');
+    p.className = block.shape[r][c] ? 'drag-bp' : 'drag-bp empty';
+    if(block.shape[r][c]) p.style.background = block.color;
+    g.appendChild(p);
+  }
+  ghostEl.appendChild(g);
+  ghostEl.style.display = 'block';
+}
+
+function attachDrag(slotEl, idx) {
+  const onStart = (e) => {
+    if(!gameActive || !blocks[idx]) return;
+    e.preventDefault();
+    const ptr = e.touches ? e.touches[0] : e;
+    dragging = { idx, block: blocks[idx], slotEl };
+    slotEl.classList.add('lifting');
+    buildGhostEl(blocks[idx]);
+    moveGhost(ptr.clientX, ptr.clientY);
+    clearGhostCells();
+  };
+  slotEl.addEventListener('mousedown', onStart);
+  slotEl.addEventListener('touchstart', onStart, {passive:false});
+}
+
+function moveGhost(cx, cy) {
+  if(!dragging) return;
+  const block = dragging.block;
+  const cols = block.shape[0].length;
+  const rows = block.shape.length;
+  const w = cols * 22 + (cols-1)*3;
+  const h = rows * 22 + (rows-1)*3;
+  ghostEl.style.left = (cx - w*0.5) + 'px';
+  ghostEl.style.top  = (cy - h*0.5 - 28) + 'px';
+}
+
+function getDropTarget(cx, cy) {
+  if(!dragging) return null;
+  const block = dragging.block;
+  const gridRect = gridEl.getBoundingClientRect();
+  const cellW = (gridRect.width - 12 - 9*3) / 10;
+  const relX = cx - gridRect.left - 6;
+  const relY = cy - gridRect.top - 6 - (block.shape.length * (cellW+3))*0.5 - 14;
+  const col = Math.round(relX / (cellW+3));
+  const row = Math.round(relY / (cellW+3));
+  return { row, col };
+}
+
+function canPlace(block, row, col) {
+  for(let r=0;r<block.shape.length;r++) for(let c=0;c<block.shape[0].length;c++) {
+    if(!block.shape[r][c]) continue;
+    const gr = row+r, gc = col+c;
+    if(gr<0||gr>=GS||gc<0||gc>=GS) return false;
+    if(grid[gr][gc]) return false;
+  }
+  return true;
+}
+
+let lastGhostCells = [];
+function clearGhostCells() {
+  lastGhostCells.forEach(({r,c}) => {
+    const el = getCell(r,c);
+    if(el) { el.classList.remove('ghost','ghost-bad'); }
+  });
+  lastGhostCells = [];
+}
+
+function showGhostCells(block, row, col) {
+  clearGhostCells();
+  const valid = canPlace(block, row, col);
+  for(let r=0;r<block.shape.length;r++) for(let c=0;c<block.shape[0].length;c++) {
+    if(!block.shape[r][c]) continue;
+    const gr=row+r, gc=col+c;
+    const el = getCell(gr,gc);
+    if(el) {
+      el.classList.add(valid ? 'ghost' : 'ghost-bad');
+      lastGhostCells.push({r:gr,c:gc});
+    }
+  }
+  return valid;
+}
+
+function onMove(e) {
+  if(!dragging) return;
+  e.preventDefault();
+  const ptr = e.touches ? e.touches[0] : e;
+  moveGhost(ptr.clientX, ptr.clientY);
+  const target = getDropTarget(ptr.clientX, ptr.clientY);
+  if(target) showGhostCells(dragging.block, target.row, target.col);
+}
+
+function onEnd(e) {
+  if(!dragging) return;
+  const ptr = e.changedTouches ? e.changedTouches[0] : e;
+  const target = getDropTarget(ptr.clientX, ptr.clientY);
+  clearGhostCells();
+  ghostEl.style.display = 'none';
+  dragging.slotEl.classList.remove('lifting');
+
+  if(target && canPlace(dragging.block, target.row, target.col)) {
+    doPlace(dragging.block, target.row, target.col, dragging.idx);
+  }
+  dragging = null;
+}
+
+function doPlace(block, row, col, idx) {
+  let pts = 0;
+  const newCells = [];
+  for(let r=0;r<block.shape.length;r++) for(let c=0;c<block.shape[0].length;c++) {
+    if(!block.shape[r][c]) continue;
+    grid[row+r][col+c] = block.color;
+    pts++;
+    newCells.push({r:row+r, c:col+c});
+  }
+  renderGrid();
+  newCells.forEach(({r,c}) => {
+    const el = getCell(r,c);
+    if(el) el.classList.add('land-anim');
+  });
+
+  addScore(pts, null, row, col);
+  blocks[idx] = null;
+
+  const cleared = checkAndClear();
+  if(cleared === 0) { combo = 0; }
+
+  if(blocks.every(b => b === null)) dealBlocks();
+  else renderBlocks();
+
+  setTimeout(() => checkGameOver(), cleared > 0 ? 450 : 50);
+}
+
+function checkAndClear() {
+  const rowsToClear = [], colsToClear = [];
+  for(let r=0;r<GS;r++) if(grid[r].every(v=>v)) rowsToClear.push(r);
+  for(let c=0;c<GS;c++) if(grid.every(row=>row[c])) colsToClear.push(c);
+  const total = rowsToClear.length + colsToClear.length;
+  if(!total) return 0;
+
+  combo++;
+  const bonus = total * 10 * total + (combo > 1 ? combo*5 : 0);
+
+  if(combo > 1) {
+    comboEl.textContent = `🔥 ${combo}x combo! +${bonus}`;
+    setTimeout(() => { comboEl.textContent = ''; }, 1500);
+  }
+
+  const cells = new Set();
+  rowsToClear.forEach(r => { for(let c=0;c<GS;c++) cells.add(r*GS+c); });
+  colsToClear.forEach(c => { for(let r=0;r<GS;r++) cells.add(r*GS+c); });
+
+  const centerPositions = [];
+  cells.forEach(idx => {
+    const el = gridEl.children[idx];
+    if(el) {
+      el.classList.add('clearing');
+      const rect = el.getBoundingClientRect();
+      centerPositions.push({ x: rect.left + rect.width/2, y: rect.top + rect.height/2, color: el.style.background });
+    }
+  });
+
+  spawnParticles(centerPositions);
+  addScore(bonus, total, 0, 0);
+  linesCleared += total;
+  linesEl.textContent = linesCleared;
+
+  setTimeout(() => {
+    rowsToClear.forEach(r => { for(let c=0;c<GS;c++) grid[r][c]=null; });
+    colsToClear.forEach(c => { for(let r=0;r<GS;r++) grid[r][c]=null; });
+    renderGrid();
+  }, 380);
+  return total;
+}
+
+function addScore(pts, lines, r, c) {
+  score += pts;
+  if(score > best) { best = score; localStorage.setItem('bh_best', best); }
+  updateHUD();
+  scoreEl.classList.add('score-pulse');
+  scoreEl.addEventListener('animationend', () => scoreEl.classList.remove('score-pulse'), {once:true});
+  if(pts > 1) showScorePop('+' + pts, r, c);
+}
+
+function showScorePop(txt, gr, gc) {
+  const el = gridEl.children[Math.min(gr*GS+gc, gridEl.children.length-1)];
+  if(!el) return;
+  const rect = el.getBoundingClientRect();
+  scorePop.textContent = txt;
+  scorePop.style.left = rect.left + 'px';
+  scorePop.style.top = rect.top + 'px';
+  scorePop.style.display = 'block';
+  scorePop.style.animation = 'none';
+  void scorePop.offsetWidth;
+  scorePop.style.animation = 'floatUp 0.8s ease forwards';
+  setTimeout(() => scorePop.style.display = 'none', 800);
+}
+
+function spawnParticles(positions) {
+  if(!positions.length) return;
+  const sample = positions.slice(0, Math.min(positions.length, 30));
+  sample.forEach(({x, y, color}) => {
+    for(let i=0;i<4;i++) {
+      const angle = Math.random()*Math.PI*2;
+      const speed = 2 + Math.random()*4;
+      particles.push({
+        x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 2,
+        life: 1, decay: 0.025 + Math.random()*0.02,
+        r: 3+Math.random()*3, color
+      });
+    }
+  });
+}
+
+function animParticles() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.18;
+    p.life -= p.decay;
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+function checkGameOver() {
+  if(!gameActive) return;
+  const remaining = blocks.filter(b => b !== null);
+  if(!remaining.length) return;
+  const hasMoves = remaining.some(b => {
+    for(let r=0;r<=GS-b.shape.length;r++) for(let c=0;c<=GS-b.shape[0].length;c++) {
+      if(canPlace(b,r,c)) return true;
+    }
+    return false;
+  });
+  if(!hasMoves) showGameOver();
+}
+
+function showGameOver() {
+  gameActive = false;
+  const newBest = score >= best;
+  modalContent.innerHTML = `
+    <h2 style="color:#f85149">Game Over</h2>
+    <p>No more valid placements left.</p>
+    <div class="modal-score">${score}</div>
+    <div class="modal-best">${newBest ? '🏆 New best!' : 'Best: ' + best}</div>
+    <button class="btn-primary" id="mo-restart">Play again</button>
+    <button class="btn" style="width:100%;margin-top:8px" id="mo-how">How to play</button>
+  `;
+  overlay.classList.remove('hidden');
+  document.getElementById('mo-restart').addEventListener('click', init);
+  document.getElementById('mo-how').addEventListener('click', () => showHow(true));
+}
+
+function showHow(fromGameOver = false) {
+  modalContent.innerHTML = `
+    <h2 style="color:#58a6ff">How to play</h2>
+    <p style="text-align:left">
+      <b>1. Drag</b> a block from the tray onto the grid.<br><br>
+      <b>2. Clear lines</b> — fill a complete row or column to clear it and score points.<br><br>
+      <b>3. Combos</b> — clear multiple lines at once for big bonus points and a combo multiplier!<br><br>
+      <b>4. New blocks</b> appear after all three are placed.<br><br>
+      <b>Game over</b> when no block fits anywhere on the grid.
+    </p>
+    <button class="btn-primary" id="mo-close">${fromGameOver ? 'Back' : 'Got it!'}</button>
+  `;
+  overlay.classList.remove('hidden');
+  document.getElementById('mo-close').addEventListener('click', () => {
+    overlay.classList.add('hidden');
+    if(fromGameOver) showGameOver();
+  });
+}
+
+document.addEventListener('mousemove', onMove);
+document.addEventListener('touchmove', onMove, {passive:false});
+document.addEventListener('mouseup', onEnd);
+document.addEventListener('touchend', onEnd);
+document.getElementById('btn-restart').addEventListener('click', init);
+document.getElementById('btn-how').addEventListener('click', () => showHow(false));
+
+init();
+</script>
+</body>
+</html>
