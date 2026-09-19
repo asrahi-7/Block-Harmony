@@ -1,61 +1,51 @@
-# Block Harmony 🧩
+# 🧩 Block Harmony
 
-A sleek, dark-themed 10x10 block puzzle game built entirely with vanilla web technologies. Drop blocks, clear lines, and find your flow.
+*Drop blocks, clear lines, find your flow.*
 
-Whether you're playing on a desktop or swiping on your phone, Block Harmony offers a smooth, responsive puzzle experience with satisfying animations and combo multipliers.
+**[🎮 Play Block Harmony Live!](https://asrahi-7.github.io/Block-Harmony/?utm_source=gemini)**
 
- *(Note: Add a screenshot of your game here)*
+**Block Harmony** is a sleek, strategic 10x10 block puzzle game built entirely with pure web technologies. Place shapes on the board to clear lines, chain together massive combos, and chase your high score in this relaxing yet challenging grid-based puzzle.
 
 ## ✨ Features
 
-* **Classic 10x10 Gameplay:** Strategically place randomly generated block shapes onto the grid.
-* **Combo System:** Clear multiple rows or columns simultaneously to trigger combo multipliers and earn massive bonus points.
-* **Smart Drag-and-Drop:** Features a dynamic "ghost" preview that shows exactly where your block will land—and turns red if the placement is invalid.
-* **Satisfying Visuals:** Custom CSS animations for block placements and HTML5 Canvas-powered particle explosions when lines are cleared.
-* **Persistent High Scores:** Your highest score is automatically saved locally in your browser.
-* **Fully Responsive:** Touch-action optimized for flawless gameplay on mobile devices and tablets.
-* **Zero Dependencies:** 100% pure HTML, CSS, and Vanilla JavaScript. No frameworks, no build tools, no bloated libraries.
+* **Fluid Gameplay:** Seamless drag-and-drop mechanics optimized for both desktop (mouse) and mobile (touch) screens.
+* **Dynamic Combo System:** Clear multiple rows or columns simultaneously to trigger score multipliers and combo streaks.
+* **Satisfying Visuals:** Features smooth CSS placement animations, glowing ghost-previews for precise drops, and a custom HTML5 Canvas particle system for line clears.
+* **Persistent High Scores:** Your best score is saved locally to your browser so you never lose your progress.
+* **Zero Dependencies:** Built entirely with vanilla HTML, CSS, and JavaScript. No external libraries or frameworks.
 
-## 🎮 How to Play
+## 🕹️ How to Play
 
 1. **Drag** a block from the bottom tray onto the 10x10 grid.
 2. **Clear lines** by filling a complete row or column.
-3. **Trigger Combos** by clearing multiple lines at once.
-4. **Restock:** New blocks will appear only after you have placed all three blocks from the current tray.
-5. **Survive:** The game ends when none of the remaining blocks can fit anywhere on the grid. Plan ahead!
+3. **Trigger Combos** by clearing multiple lines at once for huge bonus points.
+4. **Survive** by planning ahead. The game ends when none of the available blocks fit anywhere on the grid.
 
-## 🚀 How to Run Locally
+## 🛠️ Tech Stack
 
-Because this project uses vanilla web technologies, running it is as simple as opening a file.
+* **HTML5:** Structure and Canvas API for particle effects.
+* **CSS3:** CSS Grid for the game board, Flexbox for HUD elements, and custom `@keyframes` for popping/landing animations.
+* **Vanilla JavaScript (ES6+):** Game logic, drag-and-drop event handling, and collision detection.
 
-1. Clone the repository:
+## 🚀 Running Locally
+
+To play or modify the game on your local machine, simply clone the repository and open the `index.html` file in your browser—no build tools or servers required!
+
 ```bash
+# Clone the repository
 git clone https://github.com/asrahi-7/Block-Harmony.git
+
+# Navigate to the directory
+cd Block-Harmony
+
+# Open in your default browser (macOS)
+open index.html 
+
+# On Windows use: start index.html
+# On Linux use: xdg-open index.html
 
 ```
 
-
-2. Navigate to the project directory.
-3. Double-click `index.html` to open it in your default web browser.
-
-*(Alternatively, you can host it instantly using GitHub Pages!)*
-
-## 🛠️ Technical Stack
-
-* **HTML5:** Semantic structure and Canvas API for particle effects.
-* **CSS3:** Flexbox/Grid layouts, CSS variables for theming, keyframe animations, and mobile-first media queries. The UI uses a modern, developer-friendly color palette inspired by GitHub's dark mode.
-* **Vanilla JavaScript:** ES6+ syntax handling the game loop, drag-and-drop touch events, grid matrix logic, collision detection, and particle physics.
-
-## 📁 Project Context
-
-I developed **Block Harmony** as part of my broader portfolio to demonstrate proficiency in:
-
-* **Algorithm Design:** Matrix manipulation for grid validation and line clearing.
-* **Event Handling:** Seamlessly unifying mouse and touch events for cross-device compatibility.
-* **Performance:** Keeping the DOM light and using the `<canvas>` element for performant particle animations.
-
 ---
 
-### License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+*Created by [asrahi-7](https://www.google.com/search?q=https%3A%2F%2Fgithub.com%2Fasrahi-7).*
